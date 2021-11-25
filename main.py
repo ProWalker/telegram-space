@@ -1,15 +1,18 @@
 from pathlib import Path
 from dotenv import load_dotenv
 from urllib.parse import urlparse
+from os import path
 
 import requests
+import datetime
+import os
 
 
-def download_picture(url, image_name):
+def download_picture(url, directory, image_name):
     response = requests.get(url)
     response.raise_for_status()
-    Path('images').mkdir(parents=True, exist_ok=True)
-    file_path = f'images/{image_name}'
+    Path(f'images/{directory}').mkdir(parents=True, exist_ok=True)
+    file_path = f'images/{directory}/{image_name}'
 
     with open(file_path, 'wb') as file:
         file.write(response.content)
@@ -19,15 +22,47 @@ def fetch_spacex_last_launch():
     response = requests.get('https://api.spacexdata.com/v4/launches/5eb87ce3ffd86e000604b336')
     response.raise_for_status()
     images_links = response.json()['links']['flickr']['original']
-    for image_number, url in enumerate(images_links):
-        download_picture(url, f'spacex{image_number}.jpg')
+    for image_number, url in enumerate(images_links, start=1):
+        download_picture(url, 'spacex', f'spacex{image_number}.jpg')
 
 
 def get_image_extension_from_url(url):
-    pass
+    url_parts = urlparse(url)
+    file_name = path.split(url_parts.path)[1]
+    file_extension = path.splitext(file_name)[1]
+    return file_extension
+
+
+def fetch_nasa_apod(token, count=1):
+    params = {
+        'api_key': token,
+        'count': count,
+    }
+    response = requests.get('https://api.nasa.gov/planetary/apod', params=params).json()
+    for count, item in enumerate(response, start=1):
+        try:
+            image_extension = get_image_extension_from_url(item['hdurl'])
+        except KeyError:
+            continue
+        download_picture(item['hdurl'], 'nasa', f'apod{count}{image_extension}')
+
+
+def fetch_nasa_epic(token):
+    params = {
+        'api_key': token,
+    }
+    response = requests.get('https://api.nasa.gov/EPIC/api/natural/', params=params).json()
+    for count, item in enumerate(response, start=1):
+        image_date = datetime.datetime.fromisoformat(item['date'])
+        source_url = f'https://epic.gsfc.nasa.gov/archive/natural/{image_date.year}/{image_date.month}/' \
+                     f'{image_date.day}/png/{item["image"]}.png'
+        download_picture(source_url, 'nasa', f'epic{count}.png')
+
 
 if __name__ == '__main__':
     load_dotenv()
-    # fetch_spacex_last_launch()
-    image_extension = get_image_extension_from_url('https://example.com/txt/hello%20world.txt?v=9#python')
-    print(image_extension)
+    nasa_token = os.getenv('NASA_TOKEN')
+    fetch_spacex_last_launch()
+    fetch_nasa_apod(nasa_token, 30)
+    fetch_nasa_epic(nasa_token)
+
