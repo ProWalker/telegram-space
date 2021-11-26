@@ -1,12 +1,12 @@
 from pathlib import Path
 from dotenv import load_dotenv
 from urllib.parse import urlparse
-from os import path
 
 import requests
 import datetime
 import os
 import telegram
+import random
 
 
 def download_picture(url, image_name):
@@ -29,8 +29,8 @@ def fetch_spacex_last_launch():
 
 def get_image_extension_from_url(url):
     url_parts = urlparse(url)
-    file_name = path.split(url_parts.path)[1]
-    file_extension = path.splitext(file_name)[1]
+    file_name = os.path.split(url_parts.path)[1]
+    file_extension = os.path.splitext(file_name)[1]
     return file_extension
 
 
@@ -63,6 +63,8 @@ def fetch_nasa_epic(token):
 if __name__ == '__main__':
     load_dotenv()
     telegram_token = os.getenv('TELEGRAM_TOKEN')
+    images = os.listdir('images')
+    random_image = random.choice(images)
     bot = telegram.Bot(token=telegram_token)
-    bot.send_message(chat_id='@space_in_place', text='Hi! Message from bot!')
+    bot.send_document(chat_id='@space_in_place', document=open(f'images/{random_image}', 'rb'))
 
