@@ -62,11 +62,7 @@ def fetch_nasa_epic(token):
 
 if __name__ == '__main__':
     load_dotenv()
-    # telegram_token = os.getenv('TELEGRAM_TOKEN')
-    # bot = telegram.Bot(token=telegram_token)
-    # bot.send_message(chat_id='@space_in_place', text='Hi! Message from bot!')
-    nasa_token = os.getenv('NASA_TOKEN')
-    fetch_spacex_last_launch()
-    fetch_nasa_apod(nasa_token, 30)
-    fetch_nasa_epic(nasa_token)
+    telegram_token = os.getenv('TELEGRAM_TOKEN')
+    bot = telegram.Bot(token=telegram_token)
+    bot.send_message(chat_id='@space_in_place', text='Hi! Message from bot!')
 
