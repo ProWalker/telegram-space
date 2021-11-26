@@ -9,11 +9,11 @@ import os
 import telegram
 
 
-def download_picture(url, directory, image_name):
+def download_picture(url, image_name):
     response = requests.get(url)
     response.raise_for_status()
-    Path(f'images/{directory}').mkdir(parents=True, exist_ok=True)
-    file_path = f'images/{directory}/{image_name}'
+    Path(f'images').mkdir(parents=True, exist_ok=True)
+    file_path = f'images/{image_name}'
 
     with open(file_path, 'wb') as file:
         file.write(response.content)
@@ -24,7 +24,7 @@ def fetch_spacex_last_launch():
     response.raise_for_status()
     images_links = response.json()['links']['flickr']['original']
     for image_number, url in enumerate(images_links, start=1):
-        download_picture(url, 'spacex', f'spacex{image_number}.jpg')
+        download_picture(url, f'spacex{image_number}.jpg')
 
 
 def get_image_extension_from_url(url):
@@ -45,7 +45,7 @@ def fetch_nasa_apod(token, count=1):
             image_extension = get_image_extension_from_url(item['hdurl'])
         except KeyError:
             continue
-        download_picture(item['hdurl'], 'nasa', f'apod{count}{image_extension}')
+        download_picture(item['hdurl'], f'apod{count}{image_extension}')
 
 
 def fetch_nasa_epic(token):
@@ -57,12 +57,16 @@ def fetch_nasa_epic(token):
         image_date = datetime.datetime.fromisoformat(item['date'])
         source_url = f'https://epic.gsfc.nasa.gov/archive/natural/{image_date.year}/{image_date.month}/' \
                      f'{image_date.day}/png/{item["image"]}.png'
-        download_picture(source_url, 'nasa', f'epic{count}.png')
+        download_picture(source_url, f'epic{count}.png')
 
 
 if __name__ == '__main__':
     load_dotenv()
-    telegram_token = os.getenv('TELEGRAM_TOKEN')
-    bot = telegram.Bot(token=telegram_token)
-    bot.send_message(chat_id='@space_in_place', text='Hi! Message from bot!')
+    # telegram_token = os.getenv('TELEGRAM_TOKEN')
+    # bot = telegram.Bot(token=telegram_token)
+    # bot.send_message(chat_id='@space_in_place', text='Hi! Message from bot!')
+    nasa_token = os.getenv('NASA_TOKEN')
+    fetch_spacex_last_launch()
+    fetch_nasa_apod(nasa_token, 30)
+    fetch_nasa_epic(nasa_token)
 
