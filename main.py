@@ -1,3 +1,4 @@
+import time
 from pathlib import Path
 from dotenv import load_dotenv
 from urllib.parse import urlparse
@@ -6,7 +7,6 @@ import requests
 import datetime
 import os
 import telegram
-import random
 
 
 def download_picture(url, image_name):
@@ -63,8 +63,21 @@ def fetch_nasa_epic(token):
 if __name__ == '__main__':
     load_dotenv()
     telegram_token = os.getenv('TELEGRAM_TOKEN')
-    images = os.listdir('images')
-    random_image = random.choice(images)
+    nasa_token = os.getenv('NASA_TOKEN')
+    tg_chat_id = os.getenv('TG_CHAT_ID')
+    script_delay = int(os.getenv('SCRIPT_DELAY'))
     bot = telegram.Bot(token=telegram_token)
-    bot.send_document(chat_id='@space_in_place', document=open(f'images/{random_image}', 'rb'))
+    while True:
+        fetch_spacex_last_launch()
+        fetch_nasa_apod(nasa_token, 30)
+        fetch_nasa_epic(nasa_token)
+        images = os.listdir('images')
+        for image in images:
+            while True:
+                try:
+                    bot.send_document(chat_id=tg_chat_id, document=open(f'images/{image}', 'rb'))
+                    break
+                except telegram.error.RetryAfter as tgErrorRetryAfter:
+                    time.sleep(tgErrorRetryAfter.retry_after)
+        time.sleep(script_delay)
 
