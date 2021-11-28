@@ -1,30 +1,13 @@
-import time
-from pathlib import Path
 from dotenv import load_dotenv
+from pathlib import Path
 from urllib.parse import urlparse
+from fetch_spacex import fetch_spacex_last_launch
+from fetch_nasa import fetch_nasa_apod, fetch_nasa_epic
 
-import requests
-import datetime
+import time
 import os
 import telegram
-
-
-def download_picture(url, image_name):
-    response = requests.get(url)
-    response.raise_for_status()
-    Path(f'images').mkdir(parents=True, exist_ok=True)
-    file_path = f'images/{image_name}'
-
-    with open(file_path, 'wb') as file:
-        file.write(response.content)
-
-
-def fetch_spacex_last_launch():
-    response = requests.get('https://api.spacexdata.com/v4/launches/5eb87ce3ffd86e000604b336')
-    response.raise_for_status()
-    images_links = response.json()['links']['flickr']['original']
-    for image_number, url in enumerate(images_links, start=1):
-        download_picture(url, f'spacex{image_number}.jpg')
+import requests
 
 
 def get_image_extension_from_url(url):
@@ -34,30 +17,20 @@ def get_image_extension_from_url(url):
     return file_extension
 
 
-def fetch_nasa_apod(token, count=1):
-    params = {
-        'api_key': token,
-        'count': count,
-    }
-    response = requests.get('https://api.nasa.gov/planetary/apod', params=params).json()
-    for count, item in enumerate(response, start=1):
-        try:
-            image_extension = get_image_extension_from_url(item['hdurl'])
-        except KeyError:
-            continue
-        download_picture(item['hdurl'], f'apod{count}{image_extension}')
+def download_picture(url, image_name):
+    response = requests.get(url)
+    response.raise_for_status()
+    Path(f'images').mkdir(parents=True, exist_ok=True)
+    image_extension = get_image_extension_from_url(url)
+    file_path = f'images/{image_name}{image_extension}'
+
+    with open(file_path, 'wb') as file:
+        file.write(response.content)
 
 
-def fetch_nasa_epic(token):
-    params = {
-        'api_key': token,
-    }
-    response = requests.get('https://api.nasa.gov/EPIC/api/natural/', params=params).json()
-    for count, item in enumerate(response, start=1):
-        image_date = datetime.datetime.fromisoformat(item['date'])
-        source_url = f'https://epic.gsfc.nasa.gov/archive/natural/{image_date.year}/{image_date.month}/' \
-                     f'{image_date.day}/png/{item["image"]}.png'
-        download_picture(source_url, f'epic{count}.png')
+def bulk_download_picture(urls, image_name):
+    for count, url in enumerate(urls):
+        download_picture(url, f'{image_name}{count}')
 
 
 if __name__ == '__main__':
@@ -68,9 +41,12 @@ if __name__ == '__main__':
     script_delay = int(os.getenv('SCRIPT_DELAY'))
     bot = telegram.Bot(token=telegram_token)
     while True:
-        fetch_spacex_last_launch()
-        fetch_nasa_apod(nasa_token, 30)
-        fetch_nasa_epic(nasa_token)
+        spacex_images_links = fetch_spacex_last_launch()
+        nasa_apod_images_links = fetch_nasa_apod(nasa_token, 30)
+        nasa_epic_images_links = fetch_nasa_epic(nasa_token)
+        bulk_download_picture(spacex_images_links, 'spacex')
+        bulk_download_picture(nasa_apod_images_links, 'apod')
+        bulk_download_picture(nasa_epic_images_links, 'epic')
         images = os.listdir('images')
         for image in images:
             while True:
