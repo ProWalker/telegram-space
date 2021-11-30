@@ -10,6 +10,9 @@ import telegram
 import requests
 
 
+_images_path = 'images'
+
+
 def get_image_extension_from_url(url):
     url_parts = urlparse(url)
     file_name = os.path.split(url_parts.path)[1]
@@ -20,9 +23,8 @@ def get_image_extension_from_url(url):
 def download_picture(url, image_name):
     response = requests.get(url)
     response.raise_for_status()
-    Path(f'images').mkdir(parents=True, exist_ok=True)
     image_extension = get_image_extension_from_url(url)
-    file_path = f'images/{image_name}{image_extension}'
+    file_path = f'{_images_path}/{image_name}{image_extension}'
 
     with open(file_path, 'wb') as file:
         file.write(response.content)
@@ -35,6 +37,7 @@ def bulk_download_picture(urls, image_name):
 
 if __name__ == '__main__':
     load_dotenv()
+    Path(_images_path).mkdir(parents=True, exist_ok=True)
     telegram_token = os.getenv('TELEGRAM_TOKEN')
     nasa_token = os.getenv('NASA_TOKEN')
     tg_chat_id = os.getenv('TG_CHAT_ID')
@@ -47,11 +50,12 @@ if __name__ == '__main__':
         bulk_download_picture(spacex_images_links, 'spacex')
         bulk_download_picture(nasa_apod_images_links, 'apod')
         bulk_download_picture(nasa_epic_images_links, 'epic')
-        images = os.listdir('images')
+        images = os.listdir(_images_path)
         for image in images:
             while True:
                 try:
-                    bot.send_document(chat_id=tg_chat_id, document=open(f'images/{image}', 'rb'))
+                    with open(f'{_images_path}/{image}', 'rb') as image_file:
+                        bot.send_document(chat_id=tg_chat_id, document=image_file)
                     break
                 except telegram.error.RetryAfter as tgErrorRetryAfter:
                     time.sleep(tgErrorRetryAfter.retry_after)
