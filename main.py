@@ -10,12 +10,7 @@ import telegram
 import requests
 
 
-load_dotenv()
-NASA_TOKEN = os.getenv('NASA_TOKEN')
-TG_CHAT_ID = os.getenv('TG_CHAT_ID')
-SCRIPT_DELAY = int(os.getenv('SCRIPT_DELAY'))
-TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
-IMAGES_PATH = 'images'
+_IMAGES_PATH = 'images'
 
 
 def get_image_extension_from_url(url):
@@ -29,7 +24,7 @@ def download_picture(url, image_name):
     response = requests.get(url)
     response.raise_for_status()
     image_extension = get_image_extension_from_url(url)
-    file_path = f'{IMAGES_PATH}/{image_name}{image_extension}'
+    file_path = f'{_IMAGES_PATH}/{image_name}{image_extension}'
 
     with open(file_path, 'wb') as file:
         file.write(response.content)
@@ -41,20 +36,25 @@ def bulk_download_picture(urls, image_name):
 
 
 def main():
-    Path(IMAGES_PATH).mkdir(parents=True, exist_ok=True)
-    bot = telegram.Bot(token=TELEGRAM_TOKEN)
+    load_dotenv()
+    Path(_IMAGES_PATH).mkdir(parents=True, exist_ok=True)
+    nasa_token = os.getenv('NASA_TOKEN')
+    tg_chat_id = os.getenv('TG_CHAT_ID')
+    script_delay = int(os.getenv('SCRIPT_DELAY'))
+    telegram_token = os.getenv('TELEGRAM_TOKEN')
+    bot = telegram.Bot(token=telegram_token)
     while True:
         spacex_images_links = fetch_spacex_last_launch()
-        nasa_apod_images_links = fetch_nasa_apod(NASA_TOKEN, 30)
-        nasa_epic_images_links = fetch_nasa_epic(NASA_TOKEN)
+        nasa_apod_images_links = fetch_nasa_apod(nasa_token, 30)
+        nasa_epic_images_links = fetch_nasa_epic(nasa_token)
         bulk_download_picture(spacex_images_links, 'spacex')
         bulk_download_picture(nasa_apod_images_links, 'apod')
         bulk_download_picture(nasa_epic_images_links, 'epic')
-        images = os.listdir(IMAGES_PATH)
+        images = os.listdir(_IMAGES_PATH)
         for image in images:
-            with open(f'{IMAGES_PATH}/{image}', 'rb') as image_file:
-                bot.send_document(chat_id=TG_CHAT_ID, document=image_file)
-            time.sleep(SCRIPT_DELAY)
+            with open(f'{_IMAGES_PATH}/{image}', 'rb') as image_file:
+                bot.send_document(chat_id=tg_chat_id, document=image_file)
+            time.sleep(script_delay)
 
 
 if __name__ == '__main__':
